@@ -7,7 +7,9 @@ from openpyxl.styles import numbers
 from openpyxl.chart import (
     LineChart,
     Reference,
+    BarChart,
 )
+from openpyxl.chart.layout import Layout, ManualLayout
 from openpyxl.chart.axis import DateAxis
 import lxml.html as html
 
@@ -37,65 +39,73 @@ def home():
                 comunaxpath = '//tr[@id="LC188"]/td/text()'
             elif comuna == "Talca":
                 comunaxpath = '//tr[@id="LC202"]/td/text()'
-            elif comuna == 'Aysén':
+            elif comuna == 'Aysén' or comuna == 'Aysen':
                 comunaxpath = '//tr[@id="LC341"]/td/text()'
             else:
                 comunaxpath = '//tr[contains(.,"' + comuna + '")]/td/text()'
 
             headers = parsed.xpath(XPATH_HEADERS)
-            print(f'path: {comunaxpath}')
             data = parsed.xpath(comunaxpath)
-            print(f'data: {data}')
             today = datetime.date.today().strftime('%d-%m-%Y')
             wb = Workbook()
             ws = wb.active
             ws.title = "reporte " + today
-            print(len(data))
+            # print(len(data))
             for i in range(0, 5):
                 _ = ws.cell(column=i+1, row=1, value=headers[i])
                 _ = ws.cell(column=i+1, row=2, value=data[i])
 
-            # _ = ws.cell(column=1, row=4, value="Fecha")
-            # _ = ws.cell(column=1, row=5, value="Casos Totales")
-            # _ = ws.cell(column=1, row=6, value="Casos Diarios")
             ws['A4'] = 'Fecha'
             ws['B4'] = 'Casos Totales'
             ws['C4'] = 'Casos Diarios'
 
+            # fechas
             # for i in range(5, len(data)-1):
-            print(len(data)-2)
-            for i in range(len(data)-2, 4, -1):
-                _ = ws.cell(column=1, row=len(data)-i+4, value=headers[i])
+            #   _ = ws.cell(column=1, row=i, value=headers[i])
+            # casos Totales
+            for i in range(5, len(data)-1):
+                _ = ws.cell(column=1, row=i, value=headers[i])
+                _ = ws.cell(column=2, row=i, value=int(float(data[i])))
+            # casos diarios
+            for i in range(5, len(data)-1):
+                if i == 5:
+                    _ = ws.cell(column=3, row=i, value='=B' +
+                                str(i))
+                else:
+                    _ = ws.cell(column=3, row=i, value='=B' +
+                                str(i)+'-B'+str(i-1))
 
-            for i in range(len(data)-2, 4, -1):
-                _ = ws.cell(column=1, row=len(data)-i+3, value=headers[i])
-                _ = ws.cell(column=2, row=len(data)-i +
-                            3, value=int(float(data[i])))
-
-            for i in range(len(data)-2, 4, -1):
-                _ = ws.cell(column=3, row=len(data)-i+3, value='=B' +
-                            str(len(data)-i+3)+'-B'+str(len(data)-i+4))
-            # for i in range(1, len(headers)):
             for i in range(1, 6):
                 ws.column_dimensions[get_column_letter(i)].auto_size = True
 
-            chart = LineChart()
-            chart.title = "Grafico"
+            chart = BarChart()
+            chart.title = "Casos diarios para la comuna de " + comuna
+            chart.type = "col"
             chart.style = 13
             chart.y_axis.title = "Casos diarios"
             chart.x_axis.title = "Fecha"
             chart.x_axis.number_format = 'dd-mm-yyyy'
             chart.height = 15
-            chart.width = 30
+            chart.width = 45
 
-            values = Reference(ws, min_col=3, min_row=len(data),
-                               max_col=3, max_row=5)
+            values = Reference(ws, min_col=3, min_row=4,
+                               max_col=3, max_row=len(data)-2)
+
             chart.add_data(values, titles_from_data=True)
 
             dates = Reference(ws, min_col=1, min_row=5,
-                              max_col=1, max_row=len(data)+4)
+                              max_col=1, max_row=len(data)-2)
             chart.set_categories(dates)
+            chart.legend.layout = Layout(
+                manualLayout=ManualLayout(
+                    yMode='edge',
+                    xMode='edge',
+                    x=1, y=0.1,
+                    h=0.1, w=1
+                )
+            )
             ws.add_chart(chart, "E4")
+
             wb.save(f'Reporte {comuna} {today}.xlsx')
 
         else:
