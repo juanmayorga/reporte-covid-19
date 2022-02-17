@@ -15,8 +15,10 @@ import lxml.html as html
 
 
 HOME_URL = 'https://github.com/MinCiencia/Datos-COVID19/blob/master/output/producto1/Covid-19.csv'
+HOME_URL_SHEET2 = 'https://github.com/MinCiencia/Datos-COVID19/blob/master/output/producto90/incidencia_en_vacunados.csv'
 
 XPATH_HEADERS = '//tr[@id="LC1"]/th/text()'
+XPATH_HEADERS_SHEET2 = '//tr[@id="LC1"]/th/text()'
 
 
 def home():
@@ -50,25 +52,25 @@ def home():
             wb = Workbook()
             ws = wb.active
             ws.title = "reporte " + today
-            # print(len(data))
+            ws['A1'] = 'Estos datos son obtenidos desde el repositorio Github del Ministerio de Ciencias: https://github.com/MinCiencia/Datos-COVID19/blob/master/output/producto1/Covid-19.csv'
             for i in range(0, 5):
-                _ = ws.cell(column=i+1, row=1, value=headers[i])
-                _ = ws.cell(column=i+1, row=2, value=data[i])
+                _ = ws.cell(column=i+1, row=3, value=headers[i])
+                _ = ws.cell(column=i+1, row=4, value=data[i])
 
-            ws['A4'] = 'Fecha'
-            ws['B4'] = 'Casos Totales'
-            ws['C4'] = 'Casos Diarios'
+            ws['A6'] = 'Fecha'
+            ws['B6'] = 'Casos Totales'
+            ws['C6'] = 'Casos Diarios'
 
             # fechas
             # for i in range(5, len(data)-1):
             #   _ = ws.cell(column=1, row=i, value=headers[i])
             # casos Totales
-            for i in range(5, len(data)-1):
+            for i in range(7, len(data)-1):
                 _ = ws.cell(column=1, row=i, value=headers[i])
                 _ = ws.cell(column=2, row=i, value=int(float(data[i])))
             # casos diarios
-            for i in range(5, len(data)-1):
-                if i == 5:
+            for i in range(7, len(data)-1):
+                if i == 7:
                     _ = ws.cell(column=3, row=i, value='=B' +
                                 str(i))
                 else:
@@ -104,12 +106,33 @@ def home():
                     h=0.1, w=1
                 )
             )
-            ws.add_chart(chart, "E4")
+            ws.add_chart(chart, "E6")
 
-            wb.save(f'Reporte {comuna} {today}.xlsx')
+            #wb.save(f'Reporte {comuna} {today}.xlsx')
 
         else:
             raise ValueError(f'Error: {response.status_code}')
+
+        response = requests.get(HOME_URL_SHEET2)
+
+        if response.status_code == 200:
+            home = response.content.decode('utf-8')
+            parsed = html.fromstring(home)
+            ws2 = wb.create_sheet('Incidencia en vacunados')
+            ws2['A1'] = 'Estos datos son obtenidos desde el repositorio Github del Ministerio de Ciencias: https://github.com/MinCiencia/Datos-COVID19/blob/master/output/producto90/incidencia_en_vacunados.csv'
+
+            #response = requests.get(HOME_URL_SHEET2)
+
+            headers_sheet2 = parsed.xpath(XPATH_HEADERS_SHEET2)
+
+            ws2['A3'] = headers_sheet2[0]
+            ws2['D3'] = 'Fallecidos sin vacunas'
+            ws2['G3'] = 'Fallecidos con vacunas (1,2,3 o 4 dosis)'
+        else:
+            raise ValueError(f'Error: {response.status_code}')
+
+        wb.save(f'Reporte {comuna} {today}.xlsx')
+
     except ValueError as e:
         print(e)
 
